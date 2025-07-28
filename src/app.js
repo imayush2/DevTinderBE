@@ -6,6 +6,9 @@ const bcrypt = require("bcrypt");
 const cookieParser = require("cookie-parser");
 const jwt = require("jsonwebtoken");
 const cors = require("cors");
+const dotenv = require('dotenv');
+
+dotenv.config();
 
 const userAuth = require("./middleware/userAuth");
 const { authRouter } = require("./routes/auth");
@@ -71,7 +74,7 @@ app.delete("/user/:userId", async (req, res) => {
 
 // 🟢 Connect to DB & start server
 db().then(() => {
-  app.listen(3000, () => {
-    console.log("Server is listening on port 3000");
+  app.listen(process.env.PORT, () => {
+    console.log(`server is listing ${process.env.PORT}`);
   });
 });

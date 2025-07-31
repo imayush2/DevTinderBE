@@ -20,10 +20,12 @@ const paymentRouter = require("./routes/paymentRouter");
 const app = express();
 
 // ✅ CORS setup
-app.use(cors({
-  origin: "http://localhost:5173",
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    credentials: true,
+  })
+);
 
 // ✅ Apply JSON parser to all routes except webhook
 app.use((req, res, next) => {
@@ -34,35 +36,6 @@ app.use((req, res, next) => {
   }
 });
 app.use(cookieParser());
-
-// ✅ Razorpay Webhook Route
-app.post("/payment/webhook", express.raw({ type: "*/*" }), (req, res) => {
-  console.log("🔔 Webhook received");
-
-  const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
-  const signature = req.headers["x-razorpay-signature"];
-
-  const body = req.body ? req.body.toString("utf8") : "";
-
-  if (!body) {
-    console.log("❌ Empty webhook body");
-    return res.status(400).send("No payload");
-  }
-
-  const expected = crypto
-    .createHmac("sha256", secret)
-    .update(body)
-    .digest("hex");
-
-  if (expected !== signature) {
-    console.log("❌ Invalid signature");
-    return res.status(400).send("Invalid signature");
-  }
-
-  console.log("✅ Valid webhook:", body);
-  res.status(200).send("Webhook received");
-});
-
 
 // ✅ Other Routes
 app.use("/", authRouter);
@@ -85,7 +58,9 @@ app.get("/profile", userAuth, async (req, res) => {
 // ✅ Update User
 app.patch("/user/:userId", async (req, res) => {
   try {
-    const user = await User.findByIdAndUpdate(req.params.userId, req.body, { new: true });
+    const user = await User.findByIdAndUpdate(req.params.userId, req.body, {
+      new: true,
+    });
     res.send(user);
   } catch (error) {
     console.error(error);

@@ -56,59 +56,82 @@ paymentRouter.post("/payment/create", userAuth, async (req, res) => {
 });
 
 //webhook api
-paymentRouter.post("/payment/webhook", express.raw({ type: "*/*" }), async (req, res) => {
-  try {
-    console.log("🔔 Webhook called");
+paymentRouter.post(
+  "/payment/webhook",
+  express.raw({ type: "*/*" }),
+  async (req, res) => {
+    try {
+      console.log("🔔 Webhook called");
 
-    const webhookSignature = req.get("X-Razorpay-Signature");
-    const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
+      const webhookSignature = req.get("X-Razorpay-Signature");
+      const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
 
-    const rawBody = req.body.toString("utf8");
+      const rawBody = req.body.toString("utf8");
 
-    // ✅ Validate signature
-    const expected = crypto
-      .createHmac("sha256", secret)
-      .update(rawBody)
-      .digest("hex");
+      // ✅ Validate signature
+      const expected = crypto
+        .createHmac("sha256", secret)
+        .update(rawBody)
+        .digest("hex");
 
-    if (expected !== webhookSignature) {
-      console.log("❌ Invalid webhook signature");
-      return res.status(400).json({ msg: "Invalid webhook signature" });
+      if (expected !== webhookSignature) {
+        console.log("❌ Invalid webhook signature");
+        return res.status(400).json({ msg: "Invalid webhook signature" });
+      }
+
+      console.log("✅ Webhook signature verified");
+
+      // ✅ Parse JSON after verification
+      const parsed = JSON.parse(rawBody);
+      const paymentDetails = parsed?.payload?.payment?.entity;
+
+      if (!paymentDetails) {
+        return res.status(400).json({ msg: "Invalid payload" });
+      }
+
+      // ✅ Update payment in DB
+      const payment = await Payment.findOne({
+        razorpayOrderId: paymentDetails.order_id,
+      });
+      if (!payment) return res.status(404).json({ msg: "Payment not found" });
+
+      payment.status = paymentDetails.status;
+      await payment.save();
+      console.log("💾 Payment updated");
+
+      // ✅ Update user premium status
+      const user = await User.findById(payment.userId);
+      if (user) {
+        user.isPremium = true;
+        user.membershipType = paymentDetails.notes?.memberType || "Silver";
+        await user.save();
+        console.log("👤 User premium updated");
+      }
+
+      return res.status(200).json({ msg: "Webhook processed successfully" });
+    } catch (error) {
+      console.error("❌ Webhook processing failed:", error);
+      return res.status(500).send("Error in webhook processing");
     }
-
-    console.log("✅ Webhook signature verified");
-
-    // ✅ Parse JSON after verification
-    const parsed = JSON.parse(rawBody);
-    const paymentDetails = parsed?.payload?.payment?.entity;
-
-    if (!paymentDetails) {
-      return res.status(400).json({ msg: "Invalid payload" });
-    }
-
-    // ✅ Update payment in DB
-    const payment = await Payment.findOne({ razorpayOrderId: paymentDetails.order_id });
-    if (!payment) return res.status(404).json({ msg: "Payment not found" });
-
-    payment.status = paymentDetails.status;
-    await payment.save();
-    console.log("💾 Payment updated");
-
-    // ✅ Update user premium status
-    const user = await User.findById(payment.userId);
-    if (user) {
-      user.isPremium = true;
-      user.membershipType = paymentDetails.notes?.memberType || "Silver";
-      await user.save();
-      console.log("👤 User premium updated");
-    }
-
-    return res.status(200).json({ msg: "Webhook processed successfully" });
-  } catch (error) {
-    console.error("❌ Webhook processing failed:", error);
-    return res.status(500).send("Error in webhook processing");
   }
-});
+);
 
+paymentRouter.get("/payment/status", userAuth, async (req, res) => {
+    try {
+      const user = await User.findById(req.userId); // ✅ use findById
+      if (!user) {
+        return res.status(404).json({ msg: "User not found" });
+      }
+  
+      res.json({
+        isPremium: user.isPremium || false,
+        membershipType: user.membershipType || null,
+      });
+    } catch (error) {
+      console.error("❌ Error fetching premium status:", error);
+      return res.status(500).send("Server error");
+    }
+  });
+  
 
 module.exports = paymentRouter;

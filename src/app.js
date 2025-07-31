@@ -36,12 +36,18 @@ app.use((req, res, next) => {
 app.use(cookieParser());
 
 // ✅ Razorpay Webhook Route
-app.post("/payment/webhook", express.raw({ type: "application/json" }), (req, res) => {
+app.post("/payment/webhook", express.raw({ type: "*/*" }), (req, res) => {
   console.log("🔔 Webhook received");
 
   const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
   const signature = req.headers["x-razorpay-signature"];
-  const body = Buffer.isBuffer(req.body) ? req.body.toString("utf8") : JSON.stringify(req.body);
+
+  const body = req.body ? req.body.toString("utf8") : "";
+
+  if (!body) {
+    console.log("❌ Empty webhook body");
+    return res.status(400).send("No payload");
+  }
 
   const expected = crypto
     .createHmac("sha256", secret)
@@ -56,6 +62,7 @@ app.post("/payment/webhook", express.raw({ type: "application/json" }), (req, re
   console.log("✅ Valid webhook:", body);
   res.status(200).send("Webhook received");
 });
+
 
 // ✅ Other Routes
 app.use("/", authRouter);

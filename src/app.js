@@ -15,8 +15,9 @@ const { authRouter } = require("./routes/auth");
 const { profileRouter } = require("./routes/profileRouter");
 const { requestRouter } = require("./routes/requestRouter");
 const userRouter = require("./routes/userRouter");
+const paymentRouter = require("./routes/paymentRouter");
 
-// 🟡 Setup CORS first, before anything else that sends a response
+// 🟡 Setup CORS  first, before anything else that sends a response
 app.use(
   cors({
     origin: "http://localhost:5173",
@@ -33,6 +34,7 @@ app.use("/", authRouter);
 app.use("/", profileRouter);
 app.use("/", requestRouter);
 app.use("/", userRouter);
+app.use("/",paymentRouter)
 
 // 🟡 Feed API (protected)
 app.get("/profile", userAuth, async (req, res) => {

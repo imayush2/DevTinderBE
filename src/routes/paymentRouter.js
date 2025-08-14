@@ -27,6 +27,7 @@ paymentRouter.post("/payment/create", userAuth, async (req, res) => {
 
     //save order in your db
     console.log(order);
+    
     const payment = new Payment({
       userId: req.user._id,
       razorpayOrderId: order.id,

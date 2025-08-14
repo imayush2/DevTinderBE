@@ -7,6 +7,8 @@ const cookieParser = require("cookie-parser");
 const jwt = require("jsonwebtoken");
 const cors = require("cors");
 const dotenv = require("dotenv");
+const http = require("http");
+const server = require("socket.io");
 
 dotenv.config();
 
@@ -44,44 +46,11 @@ app.use("/", requestRouter);
 app.use("/", userRouter);
 app.use("/", paymentRouter);
 
-// ✅ Protected profile route
-app.get("/profile", userAuth, async (req, res) => {
-  try {
-    console.log("Cookies:", req.cookies);
-    res.send("profile data");
-  } catch (error) {
-    console.error(error);
-    res.status(500).send("Some error occurred");
-  }
-});
 
-// ✅ Update User
-app.patch("/user/:userId", async (req, res) => {
-  try {
-    const user = await User.findByIdAndUpdate(req.params.userId, req.body, {
-      new: true,
-    });
-    res.send(user);
-  } catch (error) {
-    console.error(error);
-    res.status(400).send("Something went wrong");
-  }
-});
-
-// ✅ Delete User
-app.delete("/user/:userId", async (req, res) => {
-  try {
-    await User.findByIdAndDelete(req.params.userId);
-    res.send("User deleted");
-  } catch (error) {
-    console.error(error);
-    res.status(400).send("Something went wrong");
-  }
-});
 
 // ✅ Start Server
 db().then(() => {
-  app.listen(process.env.PORT, () => {
+  server.listen(process.env.PORT, () => {
     console.log(`🚀 Server running on port ${process.env.PORT}`);
   });
-});
+}); 
